@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, Tag, Discriminator
 
 SCHEMA_DRAFT = "http://json-schema.org/draft-07/schema#"
 
@@ -125,8 +125,27 @@ class Filter(StrictBaseModel):
     )
 
 
-class PlacementRule(StrictBaseModel):
-    name: str = Field(description="the name of the rule")
+class ProvidedRule(StrictBaseModel):
+    """
+    Returns the queue provided during the submission of the application. The behavior of
+    the this rule is to fully qualify the queue provided by the application if the queue
+    is not fully qualified. If a parent rule is set and the queue provided in the
+    application submission is fully qualified then the parent rule will not be executed.
+    """
+
+    name: Literal["provided"] = Field(
+        "provided",
+        examples=[
+            """
+placementrules:
+  - name: provided
+    create: true
+    parent:
+      name: user
+      create: true
+"""
+        ],
+    )
     create: bool | None = Field(None, description="can the rule create a queue")
     filter: Filter | None = Field(
         None, description="user and group filter to be applied on the callers"
@@ -134,10 +153,95 @@ class PlacementRule(StrictBaseModel):
     parent: PlacementRule | None = Field(
         None, description="rule link to allow setting a rule to generate the parent"
     )
-    value: str | None = Field(
-        None,
-        description='value a generic value interpreted depending on the rule type (i.e queue name for the "fixed" rule) or the application label name for the "tag" rule)',
+
+
+class UserNameRule(StrictBaseModel):
+    """
+    Returns the queue based on the user name that is part of the submitted application.
+    """
+
+    name: Literal["user"] = Field(
+        "user",
+        examples=[
+            """
+placementrules:
+  - name: user
+    create: false
+"""
+        ],
     )
+    create: bool | None = Field(None, description="can the rule create a queue")
+    filter: Filter | None = Field(
+        None, description="user and group filter to be applied on the callers"
+    )
+    parent: PlacementRule | None = Field(
+        None, description="rule link to allow setting a rule to generate the parent"
+    )
+
+
+class FixedRule(StrictBaseModel):
+    """
+    Returns the name configured in the rule parameter value. The value configured
+    must be a legal queue name or queue hierarchy. The name does not have to be a
+    fully qualified queue name. The hierarchy in the name uses a dot as a separator
+    for the queue names at the different levels in the hierarchy. The fixed rule can
+    only fail if the queue configured does not exist and the create flag is not set
+    as it will always return the configured queue.
+    """
+
+    name: Literal["fixed"] = Field(
+        "fixed",
+        examples=[
+            """
+placementrules:
+  - name: fixed
+    value: last_resort
+"""
+        ],
+    )
+    value: str = Field(description="must be a legal queue name or queue hierarchy")
+    create: bool | None = Field(None, description="can the rule create a queue")
+    filter: Filter | None = Field(
+        None, description="user and group filter to be applied on the callers"
+    )
+    parent: PlacementRule | None = Field(
+        None, description="rule link to allow setting a rule to generate the parent"
+    )
+
+
+class TagRule(StrictBaseModel):
+    """
+    Retrieves the queue name from the applications tags
+    """
+
+    name: Literal["tag"] = Field(
+        "tag",
+        examples=[
+            """
+placementrules:
+  - name: tag
+    value: namespace
+    create: true
+"""
+        ],
+    )
+    value: str = Field(description="the tag name")
+    create: bool | None = Field(None, description="can the rule create a queue")
+    filter: Filter | None = Field(
+        None, description="user and group filter to be applied on the callers"
+    )
+    parent: PlacementRule | None = Field(
+        None, description="rule link to allow setting a rule to generate the parent"
+    )
+
+
+PlacementRule = Annotated[
+    Annotated[ProvidedRule, Tag("provided")]
+    | Annotated[UserNameRule, Tag("user")]
+    | Annotated[FixedRule, Tag("fixed")]
+    | Annotated[TagRule, Tag("tag")],
+    Discriminator("name"),
+]
 
 
 class PartitionPreemptionConfig(StrictBaseModel):
@@ -194,7 +298,6 @@ class BaseManifest(StrictBaseModel):
             "$schema": SCHEMA_DRAFT,
             "title": "yunikorn config file",
         }
-        examples = []
 
     partitions: list[PartitionConfig] = Field(
         description="each partition contains the queue definition for a logical set of scheduler resources.",
