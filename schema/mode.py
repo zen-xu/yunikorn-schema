@@ -189,9 +189,23 @@ class BaseManifest(StrictBaseModel):
             "$schema": SCHEMA_DRAFT,
             "title": "yunikorn config file",
         }
+        examples = []
 
     partitions: list[PartitionConfig] = Field(
         description="each partition contains the queue definition for a logical set of scheduler resources.",
+        examples=[
+            """
+partitions:
+  - name: default
+    placementrules:
+      - name: tag
+        value: namespace
+        create: true
+    queues:
+      - name: root
+        submitacl: '*'
+"""
+        ],
     )
 
 
