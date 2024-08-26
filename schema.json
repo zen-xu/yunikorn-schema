@@ -1,0 +1,708 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "yunikorn config file",
+  "description": "The configuration for [`yunikorn`](https://yunikorn.apache.org) project.",
+  "type": "object",
+  "required": [
+    "partitions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "partitions": {
+      "title": "Partitions",
+      "description": "each partition contains the queue definition for a logical set of scheduler resources.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PartitionConfig"
+      },
+      "examples": [
+        "\npartitions:\n  - name: default\n    placementrules:\n      - name: tag\n        value: namespace\n        create: true\n    queues:\n      - name: root\n        submitacl: '*'\n"
+      ]
+    }
+  },
+  "$defs": {
+    "ChildTemplate": {
+      "title": "ChildTemplate",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxapplications": {
+          "title": "MaxApplications",
+          "description": "the maximum number of applications that can run in the queue",
+          "type": "integer",
+          "minimum": 1
+        },
+        "properties": {
+          "title": "Properties",
+          "description": "a set of properties, exact definition of what can be set is not part of the yaml",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "resources": {
+          "$ref": "#/$defs/Resources",
+          "description": "a resources object to specify resource limits on the queue"
+        }
+      }
+    },
+    "Filter": {
+      "title": "Filter",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "title": "Groups",
+          "description": "list of groups to filter (maybe empty)",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$"
+          }
+        },
+        "type": {
+          "title": "Type",
+          "description": "type of filter",
+          "type": "string",
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "users": {
+          "title": "Users",
+          "description": "list of users to filter (maybe empty)",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_\\.@-]*\\$?$"
+          }
+        }
+      }
+    },
+    "FixedRule": {
+      "title": "FixedRule",
+      "description": "Returns the name configured in the rule parameter value. The value configured\nmust be a legal queue name or queue hierarchy. The name does not have to be a\nfully qualified queue name. The hierarchy in the name uses a dot as a separator\nfor the queue names at the different levels in the hierarchy. The fixed rule can\nonly fail if the queue configured does not exist and the create flag is not set\nas it will always return the configured queue.",
+      "type": "object",
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "title": "Create",
+          "description": "can the rule create a queue",
+          "type": "boolean"
+        },
+        "filter": {
+          "$ref": "#/$defs/Filter",
+          "description": "user and group filter to be applied on the callers"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "default": "fixed",
+          "const": "fixed",
+          "enum": [
+            "fixed"
+          ],
+          "examples": [
+            "\nplacementrules:\n  - name: fixed\n    value: last_resort\n"
+          ]
+        },
+        "parent": {
+          "title": "Parent",
+          "description": "rule link to allow setting a rule to generate the parent",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProvidedRule"
+            },
+            {
+              "$ref": "#/$defs/UserNameRule"
+            },
+            {
+              "$ref": "#/$defs/FixedRule"
+            },
+            {
+              "$ref": "#/$defs/TagRule"
+            }
+          ],
+          "discriminator": {
+            "mapping": {
+              "fixed": "#/$defs/FixedRule",
+              "provided": "#/$defs/ProvidedRule",
+              "tag": "#/$defs/TagRule",
+              "user": "#/$defs/UserNameRule"
+            },
+            "propertyName": "name"
+          }
+        },
+        "value": {
+          "title": "Value",
+          "description": "must be a legal queue name or queue hierarchy",
+          "type": "string"
+        }
+      }
+    },
+    "Limit": {
+      "title": "Limit",
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "users",
+            "maxresources"
+          ],
+          "properties": {
+            "users": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "required": [
+            "users",
+            "maxapplications"
+          ],
+          "properties": {
+            "users": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "required": [
+            "groups",
+            "maxresources"
+          ],
+          "properties": {
+            "groups": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "required": [
+            "groups",
+            "maxapplications"
+          ],
+          "properties": {
+            "groups": {
+              "minItems": 1
+            }
+          }
+        }
+      ],
+      "properties": {
+        "groups": {
+          "title": "Groups",
+          "description": "list of groups",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$"
+          }
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "string",
+          "default": "limit description"
+        },
+        "maxapplications": {
+          "title": "MaxApplications",
+          "description": "maximum number of applications the user or group can have running",
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxresources": {
+          "title": "MaxResources",
+          "description": "maximum resources as a resource object to allow for the user or group",
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(\\d+(\\.\\d+)?)(k|M|G|T|P|E|Ki|Mi|Gi|Ti|Pi|Ei)?(m)?$"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
+            ]
+          }
+        },
+        "users": {
+          "title": "Users",
+          "description": "list of users",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_\\.@-]*\\$?$"
+          }
+        }
+      }
+    },
+    "NodeSortingPolicy": {
+      "title": "NodeSortingPolicy",
+      "description": "Global Node Sorting Policy section",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "resourceweights": {
+          "title": "ResourceWeights",
+          "description": "resource weights",
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0.0
+          },
+          "default": {
+            "vcore": 1.0,
+            "memory": 1.0
+          }
+        },
+        "type": {
+          "title": "Type",
+          "description": "different type of policies supported.\n- 'fair': available resource, descending order.\n- 'binpacking': available resource, ascending order.\n",
+          "type": "string",
+          "enum": [
+            "fair",
+            "binpacking"
+          ],
+          "examples": [
+            "fair",
+            "binpacking"
+          ]
+        }
+      }
+    },
+    "PartitionConfig": {
+      "title": "PartitionConfig",
+      "type": "object",
+      "required": [
+        "name",
+        "queues"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "limits": {
+          "title": "Limits",
+          "description": "a list of users specifying limits on the partition",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Limit"
+          }
+        },
+        "name": {
+          "title": "Name",
+          "description": "the name of the partition",
+          "type": "string"
+        },
+        "nodesortpolicy": {
+          "$ref": "#/$defs/NodeSortingPolicy",
+          "title": "NodeSortPolicy",
+          "description": "the nodesortpolicy key defines the way the nodes are sorted for the partition"
+        },
+        "placementrules": {
+          "title": "PlacementRules",
+          "description": "a list of placement rule definition objects",
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ProvidedRule"
+              },
+              {
+                "$ref": "#/$defs/UserNameRule"
+              },
+              {
+                "$ref": "#/$defs/FixedRule"
+              },
+              {
+                "$ref": "#/$defs/TagRule"
+              }
+            ],
+            "discriminator": {
+              "mapping": {
+                "fixed": "#/$defs/FixedRule",
+                "provided": "#/$defs/ProvidedRule",
+                "tag": "#/$defs/TagRule",
+                "user": "#/$defs/UserNameRule"
+              },
+              "propertyName": "name"
+            }
+          }
+        },
+        "preemption": {
+          "$ref": "#/$defs/PartitionPreemptionConfig",
+          "description": "the preemption configuration for the partition"
+        },
+        "queues": {
+          "title": "Queues",
+          "description": "a list of sub or child queues",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QueueConfig"
+          }
+        }
+      }
+    },
+    "PartitionPreemptionConfig": {
+      "title": "PartitionPreemptionConfig",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "description": "this boolean value defines the preemption behavior for the whole partition",
+          "type": "boolean"
+        }
+      }
+    },
+    "ProvidedRule": {
+      "title": "ProvidedRule",
+      "description": "Returns the queue provided during the submission of the application. The behavior of\nthe this rule is to fully qualify the queue provided by the application if the queue\nis not fully qualified. If a parent rule is set and the queue provided in the\napplication submission is fully qualified then the parent rule will not be executed.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "title": "Create",
+          "description": "can the rule create a queue",
+          "type": "boolean"
+        },
+        "filter": {
+          "$ref": "#/$defs/Filter",
+          "description": "user and group filter to be applied on the callers"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "default": "provided",
+          "const": "provided",
+          "enum": [
+            "provided"
+          ],
+          "examples": [
+            "\nplacementrules:\n  - name: provided\n    create: true\n    parent:\n      name: user\n      create: true\n"
+          ]
+        },
+        "parent": {
+          "title": "Parent",
+          "description": "rule link to allow setting a rule to generate the parent",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProvidedRule"
+            },
+            {
+              "$ref": "#/$defs/UserNameRule"
+            },
+            {
+              "$ref": "#/$defs/FixedRule"
+            },
+            {
+              "$ref": "#/$defs/TagRule"
+            }
+          ],
+          "discriminator": {
+            "mapping": {
+              "fixed": "#/$defs/FixedRule",
+              "provided": "#/$defs/ProvidedRule",
+              "tag": "#/$defs/TagRule",
+              "user": "#/$defs/UserNameRule"
+            },
+            "propertyName": "name"
+          }
+        }
+      }
+    },
+    "QueueConfig": {
+      "title": "QueueConfig",
+      "description": "The queue object for each queue",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "adminacl": {
+          "title": "AdminACL",
+          "description": "ACL for submit and or admin access",
+          "type": "string",
+          "pattern": "^\\*$|^(([^,\\s]+,)*[^,\\s]+)?\\s*((([^,\\s]+,)*[^,\\s]+)?)$"
+        },
+        "childtemplate": {
+          "$ref": "#/$defs/ChildTemplate",
+          "title": "ChildTemplate",
+          "description": "the parent queue can provide a template to define the behavior of dynamic leaf queues below it"
+        },
+        "limits": {
+          "title": "Limits",
+          "description": "a list of users specifying limits on a queue",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Limit"
+          }
+        },
+        "maxapplications": {
+          "title": "MaxApplications",
+          "description": "the maximum number of applications that can run in the queue",
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "title": "Name",
+          "description": "the name of the queue",
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+        },
+        "parent": {
+          "title": "Parent",
+          "description": "if a queue does not have a sub the queue in the configuration it is a leaf queue, unless the parent parameter is set to true",
+          "type": "boolean"
+        },
+        "properties": {
+          "$ref": "#/$defs/QueuePriorities",
+          "description": "a set of properties, exact definition of what can be set is not part of the yaml"
+        },
+        "queues": {
+          "title": "Queues",
+          "description": " a list of sub or child queues",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QueueConfig"
+          }
+        },
+        "resources": {
+          "$ref": "#/$defs/Resources",
+          "description": "a resources object to specify resource limits on the queue"
+        },
+        "submitacl": {
+          "title": "SubmitACL",
+          "description": "ACL for submit access",
+          "type": "string",
+          "pattern": "^\\*$|^(([^,\\s]+,)*[^,\\s]+)?\\s*((([^,\\s]+,)*[^,\\s]+)?)$"
+        }
+      }
+    },
+    "QueuePriorities": {
+      "title": "QueuePriorities",
+      "type": "object",
+      "properties": {
+        "application.sort.policy": {
+          "title": "application.sort.policy",
+          "description": "\nSets the policy to be used when sorting applications within a queue. This setting has no effect on a parent queue.\n\nNOTE: The stateaware policy is deprecated in YuniKorn 1.5.0 and will be removed from YuniKorn 1.6.0, where it will be treated as an alias for fifo.\n",
+          "type": "string",
+          "default": "fifo",
+          "enum": [
+            "fifo",
+            "fair",
+            "stateaware"
+          ]
+        },
+        "application.sort.priority": {
+          "title": "application.sort.priority",
+          "description": "\nWhen this property is enabled, priority will be considered when sorting queues and applications. Setting this value to disabled will ignore priorities when sorting. This setting can be specified on a parent queue and will be inherited by child queues.\n\nNOTE: YuniKorn releases prior to 1.2.0 did not support priorities when sorting. To keep the legacy behavior, set application.sort.priority to disabled.\n",
+          "type": "string",
+          "default": "enabled",
+          "enum": [
+            "enabled",
+            "disabled"
+          ]
+        },
+        "preemption.delay": {
+          "title": "preemption.delay",
+          "description": "\nThe property can only be set on a leaf queue. A queue with pending requests can only trigger preemption after it has been in the queue for at least this duration.\n",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^-?(\\d+(\\.\\d+)?)(ns|us|\u00b5s|ms|s|m|h)$"
+        },
+        "priority.offset": {
+          "title": "priority.offset",
+          "description": "\nAdjusts the priority of the queue relative to it's siblings. This can be useful to create high or low-priority queues without needing to set every task's priority manually.\n\nNOTE: This value is not inherited by child queues.\n\nWhen using the default priority policy, the queue's priority is adjusted up or down by this amount.\n\nWhen using the fence policy, the queue's priority is always set to the offset value (in other words, the priorities of tasks in the queue are ignored).\n",
+          "type": "integer",
+          "default": 0
+        },
+        "priority.policy": {
+          "title": "priority.policy",
+          "description": "\nWhen using the default preemption policy, preemption is enabled for the queue.\n\nWhen using the fence preemption policy, tasks running in or below the queue on which the property is set cannot preempt tasks outside the queue tree.\n\nWhen using the disabled preemption policy, tasks running within the queue can't be victims.\n",
+          "type": "string",
+          "default": "default",
+          "enum": [
+            "default",
+            "fence",
+            "disabled"
+          ]
+        }
+      }
+    },
+    "Resources": {
+      "title": "Resources",
+      "description": "The resource limits to set on the queue. The definition allows for an unlimited number of types to be used.\nThe mapping to \"known\" resources is not handled here.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guaranteed": {
+          "title": "Guaranteed",
+          "description": "guaranteed resources",
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(\\d+(\\.\\d+)?)(k|M|G|T|P|E|Ki|Mi|Gi|Ti|Pi|Ei)?(m)?$"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
+            ]
+          }
+        },
+        "max": {
+          "title": "Max",
+          "description": "max resources",
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(\\d+(\\.\\d+)?)(k|M|G|T|P|E|Ki|Mi|Gi|Ti|Pi|Ei)?(m)?$"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
+            ]
+          }
+        }
+      }
+    },
+    "TagRule": {
+      "title": "TagRule",
+      "description": "Retrieves the queue name from the applications tags",
+      "type": "object",
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "title": "Create",
+          "description": "can the rule create a queue",
+          "type": "boolean"
+        },
+        "filter": {
+          "$ref": "#/$defs/Filter",
+          "description": "user and group filter to be applied on the callers"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "default": "tag",
+          "const": "tag",
+          "enum": [
+            "tag"
+          ],
+          "examples": [
+            "\nplacementrules:\n  - name: tag\n    value: namespace\n    create: true\n"
+          ]
+        },
+        "parent": {
+          "title": "Parent",
+          "description": "rule link to allow setting a rule to generate the parent",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProvidedRule"
+            },
+            {
+              "$ref": "#/$defs/UserNameRule"
+            },
+            {
+              "$ref": "#/$defs/FixedRule"
+            },
+            {
+              "$ref": "#/$defs/TagRule"
+            }
+          ],
+          "discriminator": {
+            "mapping": {
+              "fixed": "#/$defs/FixedRule",
+              "provided": "#/$defs/ProvidedRule",
+              "tag": "#/$defs/TagRule",
+              "user": "#/$defs/UserNameRule"
+            },
+            "propertyName": "name"
+          }
+        },
+        "value": {
+          "title": "Value",
+          "description": "the tag name",
+          "type": "string"
+        }
+      }
+    },
+    "UserNameRule": {
+      "title": "UserNameRule",
+      "description": "Returns the queue based on the user name that is part of the submitted application.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "title": "Create",
+          "description": "can the rule create a queue",
+          "type": "boolean"
+        },
+        "filter": {
+          "$ref": "#/$defs/Filter",
+          "description": "user and group filter to be applied on the callers"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "default": "user",
+          "const": "user",
+          "enum": [
+            "user"
+          ],
+          "examples": [
+            "\nplacementrules:\n  - name: user\n    create: false\n"
+          ]
+        },
+        "parent": {
+          "title": "Parent",
+          "description": "rule link to allow setting a rule to generate the parent",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProvidedRule"
+            },
+            {
+              "$ref": "#/$defs/UserNameRule"
+            },
+            {
+              "$ref": "#/$defs/FixedRule"
+            },
+            {
+              "$ref": "#/$defs/TagRule"
+            }
+          ],
+          "discriminator": {
+            "mapping": {
+              "fixed": "#/$defs/FixedRule",
+              "provided": "#/$defs/ProvidedRule",
+              "tag": "#/$defs/TagRule",
+              "user": "#/$defs/UserNameRule"
+            },
+            "propertyName": "name"
+          }
+        }
+      }
+    }
+  }
+}
