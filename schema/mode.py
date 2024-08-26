@@ -32,6 +32,10 @@ Resource = (
     ]
     | UnsignedInt
 )
+Duration = Annotated[
+    str,
+    StringConstraints(pattern=r"^-?(\d+(\.\d+)?)(ns|us|µs|ms|s|m|h)$"),
+]
 
 
 class StrictBaseModel(BaseModel):
@@ -111,6 +115,77 @@ class Limit(StrictBaseModel):
         }
 
 
+class QueuePriorities(BaseModel):
+    application_sort_policy: Literal["fifo", "fair", "stateaware"] | None = Field(
+        "fifo",
+        alias="application.sort.policy",
+        title="application.sort.policy",
+        description="""
+Sets the policy to be used when sorting applications within a queue. This setting has no effect on a parent queue.
+
+NOTE: The stateaware policy is deprecated in YuniKorn 1.5.0 and will be removed from YuniKorn 1.6.0, where it will be treated as an alias for fifo.
+""",
+    )
+    application_sort_priority: Literal["enabled", "disabled"] | None = Field(
+        "enabled",
+        alias="application.sort.priority",
+        title="application.sort.priority",
+        description="""
+When this property is enabled, priority will be considered when sorting queues and applications. Setting this value to disabled will ignore priorities when sorting. This setting can be specified on a parent queue and will be inherited by child queues.
+
+NOTE: YuniKorn releases prior to 1.2.0 did not support priorities when sorting. To keep the legacy behavior, set application.sort.priority to disabled.
+""",
+    )
+    priority_policy: Literal["default", "fence"] | None = Field(
+        "default",
+        alias="priority.policy",
+        title="priority.policy",
+        description="""
+Sets the inter-queue priority policy to use when scheduling requests.
+
+NOTE: This value is not inherited by child queues.
+
+By default, priority applies across queues globally. In other words, higher-priority requests will be satisfied prior to lower-priority requests regardless of which queue they exist within.
+
+When the fence policy is in use on a queue, the priorities of child queues (in the case of a parent queue) or applications (in the case of a leaf queue) will not be exposed outside the fence boundary.
+""",
+    )
+    priority_offset: int = Field(
+        0,
+        alias="priority.offset",
+        title="priority.offset",
+        description="""
+Adjusts the priority of the queue relative to it's siblings. This can be useful to create high or low-priority queues without needing to set every task's priority manually.
+
+NOTE: This value is not inherited by child queues.
+
+When using the default priority policy, the queue's priority is adjusted up or down by this amount.
+
+When using the fence policy, the queue's priority is always set to the offset value (in other words, the priorities of tasks in the queue are ignored).
+""",
+    )
+    preemption_policy: Literal["default", "fence", "disabled"] = Field(
+        "default",
+        alias="priority.policy",
+        title="priority.policy",
+        description="""
+When using the default preemption policy, preemption is enabled for the queue.
+
+When using the fence preemption policy, tasks running in or below the queue on which the property is set cannot preempt tasks outside the queue tree.
+
+When using the disabled preemption policy, tasks running within the queue can't be victims.
+""",
+    )
+    preemption_delay: Duration = Field(
+        "30s",
+        alias="preemption.delay",
+        title="preemption.delay",
+        description="""
+The property can only be set on a leaf queue. A queue with pending requests can only trigger preemption after it has been in the queue for at least this duration.
+""",
+    )
+
+
 class QueueConfig(StrictBaseModel):
     """The queue object for each queue"""
 
@@ -128,7 +203,7 @@ class QueueConfig(StrictBaseModel):
         title="MaxApplications",
         ge=1,
     )
-    properties: dict[str, str] | None = Field(
+    properties: QueuePriorities | None = Field(
         None,
         description="a set of properties, exact definition of what can be set is not part of the yaml",
     )
