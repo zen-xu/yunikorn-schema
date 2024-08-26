@@ -15,15 +15,23 @@ FilterUserName = Annotated[
     str, StringConstraints(pattern=r"^[a-zA-Z][a-zA-Z0-9_\.@-]*\$?$")
 ]
 FilterGroupName = Annotated[str, StringConstraints(pattern=r"^[a-zA-Z][a-zA-Z0-9_-]*$")]
-
 Acl = Annotated[
     str,
     StringConstraints(
         pattern=r"^\*$|^(([^,\s]+,)*[^,\s]+)?\s*((([^,\s]+,)*[^,\s]+)?)$"
     ),
 ]
-UnsignedInt = Annotated[int, Field(strict=True, ge=1)]
-UnsignedFloat = Annotated[float, Field(strict=True, ge=1)]
+UnsignedInt = Annotated[int, Field(strict=True, ge=0)]
+UnsignedFloat = Annotated[float, Field(strict=True, ge=0)]
+Resource = (
+    Annotated[
+        str,
+        StringConstraints(
+            pattern=r"^(\d+(\.\d+)?)(k|M|G|T|P|E|Ki|Mi|Gi|Ti|Pi|Ei)?(m)?$"
+        ),
+    ]
+    | UnsignedInt
+)
 
 
 class StrictBaseModel(BaseModel):
@@ -42,8 +50,10 @@ class Resources(StrictBaseModel):
     The mapping to "known" resources is not handled here.
     """
 
-    guaranteed: dict[str, str] | None = Field(None, description="guaranteed resources")
-    max: dict[str, str] | None = Field(None, description="max resources")
+    guaranteed: dict[str, Resource] | None = Field(
+        None, description="guaranteed resources"
+    )
+    max: dict[str, Resource] | None = Field(None, description="max resources")
 
 
 class ChildTemplate(StrictBaseModel):
@@ -51,6 +61,7 @@ class ChildTemplate(StrictBaseModel):
         None,
         description="the maximum number of applications that can run in the queue",
         title="MaxApplications",
+        ge=1,
     )
     properties: dict[str, str] | None = Field(
         None,
@@ -65,7 +76,7 @@ class Limit(StrictBaseModel):
     limit: str = Field("limit description")
     users: list[str] | None = Field(None, description="list of users")
     groups: list[str] | None = Field(None, description="list of groups")
-    maxresources: dict[str, str] = Field(
+    maxresources: dict[str, Resource] = Field(
         None,
         description="maximum resources as a resource object to allow for the user or group",
         title="MaxResources",
@@ -74,6 +85,7 @@ class Limit(StrictBaseModel):
         None,
         description="maximum number of applications the user or group can have running",
         title="MaxApplications",
+        ge=1,
     )
 
     class Config:
@@ -114,6 +126,7 @@ class QueueConfig(StrictBaseModel):
         None,
         description="the maximum number of applications that can run in the queue",
         title="MaxApplications",
+        ge=1,
     )
     properties: dict[str, str] | None = Field(
         None,
