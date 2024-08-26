@@ -78,8 +78,8 @@ class ChildTemplate(StrictBaseModel):
 
 class Limit(StrictBaseModel):
     limit: str = Field("limit description")
-    users: list[str] | None = Field(None, description="list of users")
-    groups: list[str] | None = Field(None, description="list of groups")
+    users: list[FilterUserName] | None = Field(None, description="list of users")
+    groups: list[FilterGroupName] | None = Field(None, description="list of groups")
     maxresources: dict[str, Resource] = Field(
         None,
         description="maximum resources as a resource object to allow for the user or group",
