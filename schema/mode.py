@@ -10,6 +10,11 @@ from pydantic import BaseModel, Field, StringConstraints
 
 SCHEMA_DRAFT = "http://json-schema.org/draft-07/schema#"
 
+FilterUserName = Annotated[
+    str, StringConstraints(pattern=r"^[a-zA-Z][a-zA-Z0-9_\.@-]*\$?$")
+]
+FilterGroupName = Annotated[str, StringConstraints(pattern=r"^[a-zA-Z][a-zA-Z0-9_-]*$")]
+
 Acl = Annotated[
     str,
     StringConstraints(
@@ -112,10 +117,10 @@ class QueueConfig(StrictBaseModel):
 
 class Filter(StrictBaseModel):
     type: Literal["allow", "deny"] = Field(description="type of filter")
-    users: list[str] | None = Field(
+    users: list[FilterUserName] | None = Field(
         None, description="list of users to filter (maybe empty)"
     )
-    groups: list[str] | None = Field(
+    groups: list[FilterGroupName] | None = Field(
         None, description="list of groups to filter (maybe empty)"
     )
 
