@@ -22,8 +22,8 @@ Acl = Annotated[
         pattern=r"^\*$|^(([^,\s]+,)*[^,\s]+)?\s*((([^,\s]+,)*[^,\s]+)?)$"
     ),
 ]
-UnsignedInt = Annotated[int, Field(strict=True, ge=0)]
-UnsignedFloat = Annotated[float, Field(strict=True, ge=0)]
+UnsignedInt = Annotated[int, Field(strict=True, ge=1)]
+UnsignedFloat = Annotated[float, Field(strict=True, ge=1)]
 
 
 class StrictBaseModel(BaseModel):
@@ -75,6 +75,28 @@ class Limit(StrictBaseModel):
         description="maximum number of applications the user or group can have running",
         title="MaxApplications",
     )
+
+    class Config:
+        json_schema_extra = {
+            "anyOf": [
+                {
+                    "required": ["users", "maxresources"],
+                    "properties": {"users": {"minItems": 1}},
+                },
+                {
+                    "required": ["users", "maxapplications"],
+                    "properties": {"users": {"minItems": 1}},
+                },
+                {
+                    "required": ["groups", "maxresources"],
+                    "properties": {"groups": {"minItems": 1}},
+                },
+                {
+                    "required": ["groups", "maxapplications"],
+                    "properties": {"groups": {"minItems": 1}},
+                },
+            ],
+        }
 
 
 class QueueConfig(StrictBaseModel):
