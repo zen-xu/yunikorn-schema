@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, StringConstraints, Tag, Discriminator
 
 SCHEMA_DRAFT = "http://json-schema.org/draft-07/schema#"
 
+QueueName = Annotated[str, StringConstraints(pattern=r"^[a-zA-Z0-9_-]{1,64}$")]
 FilterUserName = Annotated[
     str, StringConstraints(pattern=r"^[a-zA-Z][a-zA-Z0-9_\.@-]*\$?$")
 ]
@@ -79,7 +80,7 @@ class Limit(StrictBaseModel):
 class QueueConfig(StrictBaseModel):
     """The queue object for each queue"""
 
-    name: str = Field(description="the name of the queue")
+    name: QueueName = Field(description="the name of the queue")
     parent: bool | None = Field(
         None,
         description="if a queue does not have a sub the queue in the configuration it is a leaf queue, unless the parent parameter is set to true",
