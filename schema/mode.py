@@ -166,8 +166,8 @@ When using the fence policy, the queue's priority is always set to the offset va
     )
     preemption_policy: Literal["default", "fence", "disabled"] = Field(
         "default",
-        alias="priority.policy",
-        title="priority.policy",
+        alias="preemption.policy",
+        title="preemption.policy",
         description="""
 When using the default preemption policy, preemption is enabled for the queue.
 

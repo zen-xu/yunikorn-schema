@@ -523,6 +523,17 @@
           "default": "30s",
           "pattern": "^-?(\\d+(\\.\\d+)?)(ns|us|\u00b5s|ms|s|m|h)$"
         },
+        "preemption.policy": {
+          "title": "preemption.policy",
+          "description": "\nWhen using the default preemption policy, preemption is enabled for the queue.\n\nWhen using the fence preemption policy, tasks running in or below the queue on which the property is set cannot preempt tasks outside the queue tree.\n\nWhen using the disabled preemption policy, tasks running within the queue can't be victims.\n",
+          "type": "string",
+          "default": "default",
+          "enum": [
+            "default",
+            "fence",
+            "disabled"
+          ]
+        },
         "priority.offset": {
           "title": "priority.offset",
           "description": "\nAdjusts the priority of the queue relative to it's siblings. This can be useful to create high or low-priority queues without needing to set every task's priority manually.\n\nNOTE: This value is not inherited by child queues.\n\nWhen using the default priority policy, the queue's priority is adjusted up or down by this amount.\n\nWhen using the fence policy, the queue's priority is always set to the offset value (in other words, the priorities of tasks in the queue are ignored).\n",
@@ -531,13 +542,12 @@
         },
         "priority.policy": {
           "title": "priority.policy",
-          "description": "\nWhen using the default preemption policy, preemption is enabled for the queue.\n\nWhen using the fence preemption policy, tasks running in or below the queue on which the property is set cannot preempt tasks outside the queue tree.\n\nWhen using the disabled preemption policy, tasks running within the queue can't be victims.\n",
+          "description": "\nSets the inter-queue priority policy to use when scheduling requests.\n\nNOTE: This value is not inherited by child queues.\n\nBy default, priority applies across queues globally. In other words, higher-priority requests will be satisfied prior to lower-priority requests regardless of which queue they exist within.\n\nWhen the fence policy is in use on a queue, the priorities of child queues (in the case of a parent queue) or applications (in the case of a leaf queue) will not be exposed outside the fence boundary.\n",
           "type": "string",
           "default": "default",
           "enum": [
             "default",
-            "fence",
-            "disabled"
+            "fence"
           ]
         }
       }
