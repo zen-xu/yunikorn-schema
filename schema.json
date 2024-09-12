@@ -33,12 +33,8 @@
           "minimum": 1
         },
         "properties": {
-          "title": "Properties",
-          "description": "a set of properties, exact definition of what can be set is not part of the yaml",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
+          "$ref": "#/$defs/QueuePriorities",
+          "description": "a set of properties, exact definition of what can be set is not part of the yaml"
         },
         "resources": {
           "$ref": "#/$defs/Resources",
