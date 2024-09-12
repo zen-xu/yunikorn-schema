@@ -67,7 +67,7 @@ class ChildTemplate(StrictBaseModel):
         title="MaxApplications",
         ge=1,
     )
-    properties: dict[str, str] | None = Field(
+    properties: QueuePriorities | None = Field(
         None,
         description="a set of properties, exact definition of what can be set is not part of the yaml",
     )
